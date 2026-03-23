@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>兄弟篮球积分赛</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --primary: #e65100;
+  --primary-light: #ff833a;
+  --bg: #1a1a2e;
+  --card: #16213e;
+  --card2: #0f3460;
+  --text: #f0f0f0;
+  --text2: #a0a0b0;
+  --gold: #ffd700;
+  --silver: #c0c0c0;
+  --bronze: #cd7f32;
+  --win: #4caf50;
+  --lose: #ef5350;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding-bottom: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.header {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  padding: 24px 16px 18px;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.header h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+.header p { font-size: 12px; opacity: 0.85; margin-top: 4px; }
+
+.tabs {
+  display: flex;
+  background: var(--card);
+  border-bottom: 2px solid var(--card2);
+  position: sticky;
+  top: 66px;
+  z-index: 99;
+}
+.tab {
+  flex: 1;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  color: var(--text2);
+}
+.tab.active {
+  color: var(--primary-light);
+  border-bottom-color: var(--primary-light);
+}
+
+.page { display: none; padding: 12px; }
+.page.active { display: block; }
+
+/* 刷新提示 */
+.refresh-bar {
+  text-align: center;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+}
+.refresh-bar:active { color: var(--primary-light); }
+
+/* 积分榜 */
+.rank-card {
+  display: flex;
+  align-items: center;
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  border-left: 4px solid transparent;
+}
+.rank-card[data-rank="1"] { border-left-color: var(--gold); background: linear-gradient(90deg, rgba(255,215,0,0.08), var(--card)); }
+.rank-card[data-rank="2"] { border-left-color: var(--silver); }
+.rank-card[data-rank="3"] { border-left-color: var(--bronze); }
+.rank-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  margin-right: 12px;
+  background: var(--card2);
+  flex-shrink: 0;
+}
+.rank-card[data-rank="1"] .rank-num { background: var(--gold); color: #333; }
+.rank-card[data-rank="2"] .rank-num { background: var(--silver); color: #333; }
+.rank-card[data-rank="3"] .rank-num { background: var(--bronze); color: #fff; }
+.rank-info { flex: 1; min-width: 0; }
+.rank-name { font-size: 16px; font-weight: 600; }
+.rank-stats { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.rank-score { font-size: 24px; font-weight: 700; color: var(--primary-light); flex-shrink: 0; margin-left: 8px; }
+.rank-score span { font-size: 12px; color: var(--text2); }
+
+/* 记录比赛 */
+.section-title {
+  font-size: 13px;
+  color: var(--text2);
+  margin: 14px 0 8px;
+  padding-left: 4px;
+}
+.mode-selector { display: flex; gap: 10px; margin-bottom: 4px; }
+.mode-btn {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid var(--card2);
+  background: var(--card);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+.mode-btn.active {
+  border-color: var(--primary-light);
+  background: rgba(230,81,0,0.15);
+}
+
+.team-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.team-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 4px;
+}
+.team-header-left { font-size: 15px; font-weight: 600; }
+.team-header-count { font-size: 13px; color: var(--text2); }
+.team-section.win-section { border: 1px solid rgba(76,175,80,0.3); }
+.team-section.lose-section { border: 1px solid rgba(239,83,80,0.3); }
+.team-section.win-section .team-header-left { color: var(--win); }
+.team-section.lose-section .team-header-left { color: var(--lose); }
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.player-chip {
+  padding: 10px 4px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 2px solid transparent;
+  text-align: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+.player-chip.selected {
+  border-color: var(--primary-light);
+  background: rgba(230,81,0,0.2);
+  color: var(--primary-light);
+  font-weight: 600;
+}
+.player-chip.disabled {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: opacity 0.2s;
+  letter-spacing: 1px;
+}
+.submit-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* 比赛记录 */
+.match-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.match-type {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--card2);
+  color: var(--text2);
+}
+.match-time { font-size: 12px; color: var(--text2); }
+.match-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.match-team {
+  flex: 1;
+  text-align: center;
+  padding: 10px 6px;
+  border-radius: 10px;
+}
+.match-team.winner { background: rgba(76,175,80,0.1); }
+.match-team.loser { background: rgba(239,83,80,0.08); }
+.match-team-label { font-size: 11px; margin-bottom: 4px; }
+.match-team.winner .match-team-label { color: var(--win); }
+.match-team.loser .match-team-label { color: var(--lose); }
+.match-team-names { font-size: 15px; font-weight: 600; }
+.match-vs { color: var(--text2); font-size: 13px; font-weight: 700; }
+.match-delete {
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: right;
+  margin-top: 8px;
+  opacity: 0.5;
+}
+.match-delete:active { opacity: 1; color: var(--lose); }
+
+.empty-state {
+  text-align: center;
+  color: var(--text2);
+  padding: 50px 20px;
+  font-size: 14px;
+  line-height: 2;
+}
+
+/* toast */
+.toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #333;
+  color: white;
+  padding: 10px 28px;
+  border-radius: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 200;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+.toast.success { background: var(--win); }
+.toast.error { background: var(--lose); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* 管理 */
+.manage-section {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.manage-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.add-player-row { display: flex; gap: 8px; }
+.add-player-row input {
+  flex: 1;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--card2);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+.add-player-row input:focus { border-color: var(--primary-light); }
+.add-player-row button {
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+.player-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.player-item:last-child { border-bottom: none; }
+.player-item-name { font-size: 14px; }
+.player-item-del {
+  color: var(--lose);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 5px 14px;
+  border-radius: 6px;
+  background: rgba(239,83,80,0.1);
+}
+.danger-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 10px;
+  border: 2px solid var(--lose);
+  background: transparent;
+  color: var(--lose);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+/* loading */
+.loading {
+  text-align: center;
+  padding: 40px;
+  color: var(--text2);
+}
+.loading::after {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--text2);
+  border-top-color: var(--primary-light);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 个人战绩弹窗 */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); z-index: 300;
+  display: flex; align-items: flex-end; justify-content: center;
+}
+.modal {
+  background: var(--bg); border-radius: 20px 20px 0 0;
+  width: 100%; max-width: 500px; max-height: 80vh;
+  overflow-y: auto; padding: 20px 16px 30px;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--card2);
+}
+.modal-title { font-size: 18px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--card2); border: none; color: var(--text);
+  font-size: 18px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+}
+.modal-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; margin-bottom: 16px;
+}
+.modal-stat {
+  background: var(--card); border-radius: 10px;
+  padding: 12px 8px; text-align: center;
+}
+.modal-stat-num { font-size: 20px; font-weight: 700; color: var(--primary-light); }
+.modal-stat-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+.modal-match-list-title { font-size: 13px; color: var(--text2); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏀 兄弟篮球积分赛</h1>
+  <p>胜+3 · 负+0 · 兄弟齐上阵</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-page="ranking">🏆 积分榜</div>
+  <div class="tab" data-page="record">📝 记录</div>
+  <div class="tab" data-page="history">📋 历史</div>
+  <div class="tab" data-page="manage">⚙ 管理</div>
+</div>
+
+<div id="ranking" class="page active"></div>
+<div id="record" class="page"></div>
+<div id="history" class="page"></div>
+<div id="manage" class="page"></div>
+
+<div class="toast" id="toast"></div>
+<div id="playerModal"></div>
+
+<script>
+const WIN_PTS = 3, LOSE_PTS = 0;
+let players = [], matches = [];
+let mode = '1v1';
+let winPicks = new Set(), losePicks = new Set();
+
+// --- API ---
+async function api(url, opts) {
+  try {
+    const res = await fetch(url, opts);
+    return await res.json();
+  } catch (e) {
+    toast('网络错误，请重试', 'error');
+    throw e;
+  }
+}
+
+async function fetchData() {
+  const data = await api('/api/data');
+  players = data.players;
+  matches = data.matches;
+}
+
+// --- Init ---
+async function init() {
+  document.getElementById('ranking').innerHTML = '<div class="loading">加载中</div>';
+  await fetchData();
+  render();
+}
+
+// --- Tabs ---
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.page).classList.add('active');
+    if (t.dataset.page === 'ranking' || t.dataset.page === 'history') {
+      fetchData().then(render);
+    }
+  });
+});
+
+// --- Toast ---
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast ' + type;
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+
+// --- Stats ---
+function getStats() {
+  const stats = {};
+  players.forEach(p => stats[p] = { score: 0, wins: 0, losses: 0, games: 0 });
+  matches.forEach(m => {
+    m.winners.forEach(p => {
+      if (!stats[p]) stats[p] = { score: 0, wins: 0, losses: 0, games: 0 };
+      stats[p].score += WIN_PTS; stats[p].wins++; stats[p].games++;
+    });
+    m.losers.forEach(p => {
+      if (!stats[p]) stats[p] = { score: 0, wins: 0, losses: 0, games: 0 };
+      stats[p].score += LOSE_PTS; stats[p].losses++; stats[p].games++;
+    });
+  });
+  return stats;
+}
+
+// --- Ranking ---
+function renderRanking() {
+  const stats = getStats();
+  const sorted = players.slice().sort((a, b) => {
+    if (stats[b].score !== stats[a].score) return stats[b].score - stats[a].score;
+    if (stats[b].wins !== stats[a].wins) return stats[b].wins - stats[a].wins;
+    return stats[a].losses - stats[b].losses;
+  });
+  const el = document.getElementById('ranking');
+  if (matches.length === 0) {
+    el.innerHTML = `<div class="empty-state">还没有比赛记录<br>点击「📝 记录」开始第一场比赛吧！</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="refresh-bar" onclick="fetchData().then(render)">↻ 下拉刷新积分榜</div>` +
+    sorted.map((p, i) => {
+      const s = stats[p];
+      const wr = s.games > 0 ? Math.round(s.wins / s.games * 100) : 0;
+      return `<div class="rank-card" data-rank="${i + 1}" onclick="showPlayerDetail('${p}')" style="cursor:pointer">
+        <div class="rank-num">${i + 1}</div>
+        <div class="rank-info">
+          <div class="rank-name">${p}</div>
+          <div class="rank-stats">${s.games}场 · ${s.wins}胜${s.losses}负 · 胜率${wr}%</div>
+        </div>
+        <div class="rank-score">${s.score}<span> 分</span></div>
+      </div>`;
+    }).join('');
+}
+
+// --- Record ---
+function renderRecord() {
+  const max = mode === '1v1' ? 1 : 2;
+  const wc = winPicks.size, lc = losePicks.size;
+  const canSubmit = wc === max && lc === max;
+  const allPicked = new Set([...winPicks, ...losePicks]);
+
+  function chips(forSide) {
+    return players.map(p => {
+      const inWin = winPicks.has(p), inLose = losePicks.has(p);
+      const picked = inWin || inLose;
+      let cls = '';
+      if ((forSide === 'win' && inWin) || (forSide === 'lose' && inLose)) cls = 'selected';
+      else if (picked) cls = 'disabled';
+      else if ((forSide === 'win' && wc >= max) || (forSide === 'lose' && lc >= max)) cls = 'disabled';
+      return `<div class="player-chip ${cls}" onclick="pick('${p}','${forSide}')">${p}</div>`;
+    }).join('');
+  }
+
+  document.getElementById('record').innerHTML = `
+    <div class="section-title">比赛模式</div>
+    <div class="mode-selector">
+      <div class="mode-btn ${mode === '1v1' ? 'active' : ''}" onclick="setMode('1v1')">1 v 1</div>
+      <div class="mode-btn ${mode === '2v2' ? 'active' : ''}" onclick="setMode('2v2')">2 v 2</div>
+    </div>
+    <div class="team-section win-section">
+      <div class="team-header">
+        <span class="team-header-left">🏆 胜方</span>
+        <span class="team-header-count">${wc} / ${max}</span>
+      </div>
+      <div class="player-grid">${chips('win')}</div>
+    </div>
+    <div class="team-section lose-section">
+      <div class="team-header">
+        <span class="team-header-left">💪 负方</span>
+        <span class="team-header-count">${lc} / ${max}</span>
+      </div>
+      <div class="player-grid">${chips('lose')}</div>
+    </div>
+    <button class="submit-btn" ${canSubmit ? '' : 'disabled'} onclick="submitMatch()">
+      提交比赛结果
+    </button>
+  `;
+}
+
+window.setMode = function(m) {
+  mode = m;
+  winPicks.clear();
+  losePicks.clear();
+  renderRecord();
+};
+
+window.pick = function(p, side) {
+  const set = side === 'win' ? winPicks : losePicks;
+  if (set.has(p)) {
+    set.delete(p);
+  } else {
+    set.add(p);
+  }
+  renderRecord();
+};
+
+window.submitMatch = async function() {
+  const winners = [...winPicks];
+  const losers = [...losePicks];
+  const btn = document.querySelector('.submit-btn');
+  btn.disabled = true;
+  btn.textContent = '提交中...';
+  try {
+    await api('/api/match', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode, winners, losers })
+    });
+    await fetchData();
+    winPicks.clear();
+    losePicks.clear();
+    toast(`${winners.join(' & ')} 胜！已记录`);
+    renderRecord();
+  } catch {}
+};
+
+// --- History ---
+function renderHistory() {
+  const el = document.getElementById('history');
+  if (matches.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无比赛记录</div>';
+    return;
+  }
+  el.innerHTML = `<div class="refresh-bar" onclick="fetchData().then(render)">↻ 点击刷新</div>` +
+    matches.map(m => `
+    <div class="match-card">
+      <div class="match-header">
+        <span class="match-type">${m.mode}</span>
+        <span class="match-time">${m.time}</span>
+      </div>
+      <div class="match-result">
+        <div class="match-team winner">
+          <div class="match-team-label">🏆 胜 +${WIN_PTS}</div>
+          <div class="match-team-names">${m.winners.join(' & ')}</div>
+        </div>
+        <div class="match-vs">VS</div>
+        <div class="match-team loser">
+          <div class="match-team-label">💪 负 +${LOSE_PTS}</div>
+          <div class="match-team-names">${m.losers.join(' & ')}</div>
+        </div>
+      </div>
+      <div class="match-delete" onclick="deleteMatch(${m.id})">撤销此场</div>
+    </div>
+  `).join('');
+}
+
+window.deleteMatch = async function(id) {
+  if (!confirm('确定撤销这场比赛吗？')) return;
+  await api('/api/match/' + id, { method: 'DELETE' });
+  await fetchData();
+  toast('已撤销');
+  render();
+};
+
+// --- Manage ---
+function renderManage() {
+  document.getElementById('manage').innerHTML = `
+    <div class="manage-section">
+      <div class="manage-title">添加球员</div>
+      <div class="add-player-row">
+        <input type="text" id="newPlayer" placeholder="输入球员名字" enterkeyhint="done">
+        <button onclick="addPlayer()">添加</button>
+      </div>
+      <div style="margin-top:10px">
+        ${players.map(p => `
+          <div class="player-item">
+            <span class="player-item-name">${p}</span>
+            <span class="player-item-del" onclick="removePlayer('${p}')">移除</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    <div class="manage-section">
+      <div class="manage-title">数据管理</div>
+      <button class="danger-btn" onclick="resetAll()">清空所有比赛记录</button>
+    </div>
+  `;
+}
+
+window.addPlayer = async function() {
+  const input = document.getElementById('newPlayer');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    const res = await api('/api/player', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    if (res.error) { toast(res.error, 'error'); return; }
+    await fetchData();
+    toast(`已添加 ${name}`);
+    render();
+  } catch {}
+};
+
+window.removePlayer = async function(p) {
+  if (!confirm(`确定移除 ${p} 吗？历史记录会保留`)) return;
+  await api('/api/player/' + encodeURIComponent(p), { method: 'DELETE' });
+  await fetchData();
+  toast(`已移除 ${p}`);
+  render();
+};
+
+window.resetAll = async function() {
+  if (!confirm('确定清空所有比赛记录吗？不可恢复！')) return;
+  await api('/api/matches', { method: 'DELETE' });
+  await fetchData();
+  toast('已清空');
+  render();
+};
+
+// --- 个人战绩弹窗 ---
+window.showPlayerDetail = function(name) {
+  const stats = getStats();
+  const s = stats[name] || { score: 0, wins: 0, losses: 0, games: 0 };
+  const wr = s.games > 0 ? Math.round(s.wins / s.games * 100) : 0;
+  const playerMatches = matches.filter(m => m.winners.includes(name) || m.losers.includes(name));
+
+  const matchListHtml = playerMatches.length === 0
+    ? '<div class="empty-state" style="padding:20px">暂无比赛记录</div>'
+    : playerMatches.map(m => {
+        const isWin = m.winners.includes(name);
+        return `<div class="match-card">
+          <div class="match-header">
+            <span class="match-type">${m.mode}</span>
+            <span class="match-time">${m.time}</span>
+          </div>
+          <div class="match-result">
+            <div class="match-team winner">
+              <div class="match-team-label">🏆 胜 +${WIN_PTS}</div>
+              <div class="match-team-names">${m.winners.join(' & ')}</div>
+            </div>
+            <div class="match-vs">VS</div>
+            <div class="match-team loser">
+              <div class="match-team-label">💪 负 +${LOSE_PTS}</div>
+              <div class="match-team-names">${m.losers.join(' & ')}</div>
+            </div>
+          </div>
+          <div style="text-align:right;margin-top:6px;font-size:12px;color:${isWin ? 'var(--win)' : 'var(--lose)'}">
+            ${isWin ? '✅ 胜 +' + WIN_PTS : '❌ 负 +' + LOSE_PTS}
+          </div>
+        </div>`;
+      }).join('');
+
+  document.getElementById('playerModal').innerHTML = `
+    <div class="modal-overlay" onclick="closePlayerModal(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">📊 ${name} 的战绩</div>
+          <button class="modal-close" onclick="closePlayerModal()">✕</button>
+        </div>
+        <div class="modal-stats">
+          <div class="modal-stat"><div class="modal-stat-num">${s.score}</div><div class="modal-stat-label">总积分</div></div>
+          <div class="modal-stat"><div class="modal-stat-num">${s.wins}</div><div class="modal-stat-label">胜场</div></div>
+          <div class="modal-stat"><div class="modal-stat-num">${s.losses}</div><div class="modal-stat-label">负场</div></div>
+          <div class="modal-stat"><div class="modal-stat-num">${wr}%</div><div class="modal-stat-label">胜率</div></div>
+        </div>
+        <div class="modal-match-list-title">比赛记录（${playerMatches.length}场）</div>
+        ${matchListHtml}
+      </div>
+    </div>`;
+};
+
+window.closePlayerModal = function(e) {
+  if (!e || e.target.classList.contains('modal-overlay')) {
+    document.getElementById('playerModal').innerHTML = '';
+  }
+};
+
+function render() {
+  renderRanking();
+  renderRecord();
+  renderHistory();
+  renderManage();
+}
+
+init();
+</script>
+</body>
+</html>
