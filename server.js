@@ -33,7 +33,7 @@ app.get('/api/data', (req, res) => {
 });
 
 app.post('/api/match', (req, res) => {
-  const { mode, winners, losers } = req.body;
+  const { mode, winners, losers, winScore, loseScore } = req.body;
   if (!mode || !winners?.length || !losers?.length) {
     return res.status(400).json({ error: '参数不完整' });
   }
@@ -43,6 +43,8 @@ app.post('/api/match', (req, res) => {
     mode,
     winners,
     losers,
+    winScore: winScore || '',
+    loseScore: loseScore || '',
     time: new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
   });
   saveData(data);
